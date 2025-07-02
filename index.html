@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Southern Cyclades Sailing Itinerary</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            margin: 0;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            margin: 10px 0 0 0;
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        
+        .map-container {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        #map {
+            height: 600px;
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .map-controls {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .map-toggle {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+        
+        .map-toggle:hover {
+            background: #5a6fd8;
+        }
+        
+        .map-toggle.active {
+            background: #4CAF50;
+        }
+        
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .info-card {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+        
+        .info-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .info-card h3 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 1.4em;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .route-stats {
+            display: flex;
+            justify-content: space-around;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            background: rgba(102, 126, 234, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 120px;
+        }
+        
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        .popup-content {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.4;
+        }
+        
+        .popup-content h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+            font-size: 1.2em;
+        }
+        
+        .popup-detail {
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .popup-detail strong {
+            color: #333;
+        }
+        
+        .legend {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 15px;
+        }
+        
+        .legend h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin: 8px 0;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        
+        .activity-section {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(102, 126, 234, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .activity-section h4 {
+            margin: 0 0 10px 0;
+            color: #667eea;
+        }
+        
+        .activity-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .activity-list li {
+            margin: 8px 0;
+            padding-left: 20px;
+            position: relative;
+        }
+        
+        .activity-list li:before {
+            content: "⚓";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            #map {
+                height: 400px;
+            }
+            
+            .route-stats {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⛵ Southern Cyclades Sailing Adventure</h1>
+            <p>14-Day Enhanced Itinerary: Lavrion → Santorini → Lavrion</p>
+        </div>
+        
+        <div class="map-container">
+            <div class="map-controls">
+                <button class="map-toggle active" onclick="switchToStreet()">Street Map</button>
+                <button class="map-toggle" onclick="switchToSatellite()">Satellite View</button>
+                <button class="map-toggle" onclick="switchToTerrain()">Terrain</button>
+            </div>
+            <div id="map"></div>
+            <div class="legend">
+                <h4>Map Legend</h4>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #4CAF50;"></div>
+                    <span>Start/End Point (Lavrion)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #2196F3;"></div>
+                    <span>Marina/Port</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #FF9800;"></div>
+                    <span>Anchorage</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #E91E63;"></div>
+                    <span>Key Destination</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="info-grid">
+            <div class="info-card">
+                <h3>📊 Route Statistics</h3>
+                <div class="route-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">14</div>
+                        <div class="stat-label">Days</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">~280</div>
+                        <div class="stat-label">Total NM</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">8</div>
+                        <div class="stat-label">Islands</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">12</div>
+                        <div class="stat-label">Stops</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🏝️ Islands Visited</h3>
+                <p><strong>Mainland Greece:</strong> Lavrion, Sounion</p>
+                <p><strong>Western Cyclades:</strong> Milos, Polyaigos, Folegandros</p>
+                <p><strong>Central Cyclades:</strong> Santorini, Ios</p>
+                <p><strong>Northern Cyclades:</strong> Sifnos, Kythnos</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>📻 Essential VHF Channels</h3>
+                <p><strong>Emergency:</strong> Channel 16 (always monitor)</p>
+                <p><strong>Adamas Port (Milos):</strong> Channel 12</p>
+                <p><strong>Vlychada Marina (Santorini):</strong> Channel 9</p>
+                <p><strong>Loutra Marina (Kythnos):</strong> Channel 73</p>
+                <p><strong>General Ports:</strong> Channel 12 or 14</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>⚓ Anchoring & Depth Info</h3>
+                <p><strong>Typical Depths:</strong> 4-10 meters</p>
+                <p><strong>Best Holding:</strong> Sandy bottoms (Sounion, Milos)</p>
+                <p><strong>Challenging:</strong> Rocky areas (Polyaigos, Kleftiko)</p>
+                <p><strong>Equipment:</strong> Long stern lines recommended</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>🚤 Transportation Tips</h3>
+                <p><strong>Dinghy Essential:</strong> Sounion, Kleftiko, Polyaigos, Manganari Bay</p>
+                <p><strong>Rental Car/Scooter:</strong> Milos exploration, Santorini</p>
+                <p><strong>Local Transport:</strong> Folegandros (taxi/bus), Sifnos (bus)</p>
+                <p><strong>Walking Distance:</strong> Most port towns</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>🎯 Highlights Not to Miss</h3>
+                <p><strong>Archaeological:</strong> Temple of Poseidon (Sounion), Akrotiri (Santorini)</p>
+                <p><strong>Natural Wonders:</strong> Sarakiniko Beach (Milos), Kleftiko, Kolona Bay</p>
+                <p><strong>Sunsets:</strong> Oia (Santorini), Folegandros Chora</p>
+                <p><strong>Swimming:</strong> Blue Bay (Polyaigos), Manganari (Ios)</p>
+            </div>
+            
+            <div class="info-card">
+                <h3>🏊 Water Activities & Adventures</h3>
+                <div class="activity-section">
+                    <h4>Snorkeling & Diving</h4>
+                    <ul class="activity-list">
+                        <li>Kleftiko caves (Milos) - crystal clear waters</li>
+                        <li>Polyaigos Blue Bay - pristine underwater visibility</li>
+                        <li>Santorini volcanic reefs near Akrotiri</li>
+                        <li>Sifnos hidden coves around Vathi</li>
+                    </ul>
+                </div>
+                <div class="activity-section">
+                    <h4>Paddleboarding & Kayaking</h4>
+                    <ul class="activity-list">
+                        <li>Kolona Bay sandbar (Kythnos)</li>
+                        <li>Manganari Bay (Ios) - calm protected waters</li>
+                        <li>Folegandros coastal caves</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🥾 Land-Based Adventures</h3>
+                <div class="activity-section">
+                    <h4>Hiking & Trekking</h4>
+                    <ul class="activity-list">
+                        <li>Fira to Oia cliff walk (Santorini) - 3 hours</li>
+                        <li>Folegandros Chora to Ano Meria trail</li>
+                        <li>Sifnos monastery trail (Chrissopigi to Vathi)</li>
+                        <li>Milos Sarakiniko to Firopotamos coastal path</li>
+                    </ul>
+                </div>
+                <div class="activity-section">
+                    <h4>Cultural Exploration</h4>
+                    <ul class="activity-list">
+                        <li>Wine tasting at Santorini's cliff-side wineries</li>
+                        <li>Pottery workshops in Sifnos traditional villages</li>
+                        <li>Cooking classes in Folegandros (book ahead)</li>
+                        <li>Local olive oil tasting in Milos</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🌙 Evening Entertainment</h3>
+                <div class="activity-section">
+                    <h4>Nightlife Hotspots</h4>
+                    <ul class="activity-list">
+                        <li>Ios Town - legendary party scene (June-August)</li>
+                        <li>Santorini jazz bars in Fira</li>
+                        <li>Beach bars on Mylopotas (Ios)</li>
+                        <li>Traditional bouzouki nights in Sifnos</li>
+                    </ul>
+                </div>
+                <div class="activity-section">
+                    <h4>Sunset Viewing</h4>
+                    <ul class="activity-list">
+                        <li>Oia castle ruins (Santorini) - most famous</li>
+                        <li>Folegandros Chora square - less crowded</li>
+                        <li>Klima village boat garages (Milos)</li>
+                        <li>Temple of Poseidon (Sounion) - from yacht</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🛍️ Shopping & Souvenirs</h3>
+                <div class="activity-section">
+                    <h4>Local Specialties</h4>
+                    <ul class="activity-list">
+                        <li>Santorini: volcanic wine, cherry tomatoes, fava beans</li>
+                        <li>Sifnos: handmade ceramics, local honey, capers</li>
+                        <li>Milos: sea salt, traditional sweets</li>
+                        <li>All islands: olive oil, local herbs, jewelry</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>⚠️ Weather & Safety Tips</h3>
+                <div class="activity-section">
+                    <h4>Seasonal Considerations</h4>
+                    <ul class="activity-list">
+                        <li>Meltemi winds: strongest July-August (NE 20-35 knots)</li>
+                        <li>Best sailing: May-June, September-October</li>
+                        <li>Summer crowds peak: July 15 - August 30</li>
+                        <li>Shoulder season perks: fewer crowds, lower prices</li>
+                    </ul>
+                </div>
+                <div class="activity-section">
+                    <h4>Safety Essentials</h4>
+                    <ul class="activity-list">
+                        <li>Check weather forecasts twice daily</li>
+                        <li>Carry extra water for remote anchorages</li>
+                        <li>GPS backup for navigation in strong winds</li>
+                        <li>Emergency contact: Greek Coast Guard 108</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="info-card">
+                <h3>🍽️ Alternative Dining Gems</h3>
+                <div class="activity-section">
+                    <h4>Hidden Local Favorites</h4>
+                    <ul class="activity-list">
+                        <li>Milos: Sirocco (Pollonia) - fresh seafood with harbor views</li>
+                        <li>Santorini: Roka (Imerovigli) - modern Greek fine dining</li>
+                        <li>Sifnos: Omega3 (Platys Gialos) - beachfront fish taverna</li>
+                        <li>Ios: Grandma's (Chora) - family recipes since 1982</li>
+                        <li>Folegandros: Pounta (Chora) - cliff-edge dining</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        // Initialize the map with satellite view as default
+        const map = L.map('map').setView([37.0, 24.5], 8);
+        
+        // Define different tile layers
+        const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        });
+        
+        const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+        });
+        
+        const terrainLayer = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.png', {
+            attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        });
+        
+        // Start with satellite view
+        satelliteLayer.addTo(map);
+        let currentLayer = 'satellite';
+        
+        // Function to switch map layers
+        function switchToStreet() {
+            map.removeLayer(satelliteLayer);
+            map.removeLayer(terrainLayer);
+            streetLayer.addTo(map);
+            updateToggleButtons('street');
+        }
+        
+        function switchToSatellite() {
+            map.removeLayer(streetLayer);
+            map.removeLayer(terrainLayer);
+            satelliteLayer.addTo(map);
+            updateToggleButtons('satellite');
+        }
+        
+        function switchToTerrain() {
+            map.removeLayer(streetLayer);
+            map.removeLayer(satelliteLayer);
+            terrainLayer.addTo(map);
+            updateToggleButtons('terrain');
+        }
+        
+        function updateToggleButtons(activeType) {
+            document.querySelectorAll('.map-toggle').forEach(btn => btn.classList.remove('active'));
+            if (activeType === 'street') {
+                document.querySelector('button[onclick="switchToStreet()"]').classList.add('active');
+            } else if (activeType === 'satellite') {
+                document.querySelector('button[onclick="switchToSatellite()"]').classList.add('active');
+            } else if (activeType === 'terrain') {
+                document.querySelector('button[onclick="switchToTerrain()"]').classList.add('active');
+            }
+        }
+        
+        // Set initial active button
+        updateToggleButtons('satellite');
+        
+        // Define waypoints with detailed information
+        const waypoints = [
+            {
+                name: "Lavrion",
+                coords: [37.71209302762962, 24.057632283652644],
+                day: "Start/End",
+                type: "start",
+                info: "Main charter base with full services. Marina facilities include fuel, water, electricity, and provisions.",
+                highlights: [
+                    "🏛️ Mineralogical Museum of Lavrion – Explore ancient silver-mining tools and coins",
+                    "🍽️ To Steki Tou Mina – Local taverna serving authentic Greek meze and seafood by the harbor",
+                    "🐟 Pezodromos – A top-rated seafood spot in town (TripAdvisor's #1)"
+                ]
+            },
+            {
+                name: "Sounion",
+                coords: [37.6511, 24.0211],
+                day: "Day 1",
+                distance: "6 NM",
+                type: "anchorage",
+                info: "Anchor below Temple of Poseidon. Sandy bottom, 5-10m depth. Access via dinghy. VHF: Monitor Channel 16.",
+                highlights: [
+                    "🏛️ Temple of Poseidon – Perfect for sunset viewing",
+                    "⚠️ No dining options ashore, bring snacks or enjoy on board"
+                ]
+            },
+            {
+                name: "Milos (Adamas)",
+                coords: [36.723619436815916, 24.445199248010518],
+                day: "Day 2-5",
+                distance: "65 NM",
+                type: "marina",
+                info: "Long crossing - depart early. Full marina services. Town walkable. VHF: Channel 12. Depth: 5-7m.",
+                highlights: [
+                    "🍽️ O Hamos – Family-friendly Greek restaurant in Adamas",
+                    "🌅 Apoplous – Beachfront seafood with sunset views and local specialties",
+                    "🐟 Astakas (Klima) – Traditional seafood taverna with gorgeous sunset views",
+                    "🍷 Okto, Nama & Kyra – Elevated chef-led dining in Pollonia and Plaka",
+                    "🍸 Verina – Cozy evening spot in Plaka with nautical decor"
+                ]
+            },
+            {
+                name: "Kleftiko",
+                coords: [36.64992376217523, 24.33269086762065],
+                day: "Day 4",
+                type: "anchorage",
+                info: "Famous white cliffs and caves. Remote anchorage, dinghy access. Perfect for swimming and snorkeling.",
+                highlights: [
+                    "⚓ Anchor overnight for pure Aegean luxury",
+                    "🏊 Crystal clear waters for swimming and snorkeling",
+                    "📸 Iconic white limestone formations and sea caves"
+                ]
+            },
+            {
+                name: "Polyaigos (Blue Bay)",
+                coords: [36.749992362892904, 24.631373960179342],
+                day: "Day 5",
+                type: "anchorage",
+                info: "Pristine uninhabited island. Crystal clear waters. Remote - no services. Anchor 5-10m, ensure good holding.",
+                highlights: [
+                    "🏊 Anchor for swimming in serene turquoise waters",
+                    "🏝️ Completely uninhabited - pristine nature",
+                    "⚓ Remote location - ensure excellent anchoring"
+                ]
+            },
+            {
+                name: "Folegandros",
+                coords: [36.61421510780728, 24.94960342833057],
+                day: "Day 6",
+                distance: "20 NM",
+                type: "marina",
+                info: "Karavostasis Port. Limited facilities. Taxi/bus to stunning Chora. VHF: Channel 12. Depth: 4-6m.",
+                highlights: [
+                    "🍽️ To Goupi – Fantastic Greek dishes in a pretty Chora square",
+                    "🍻 Astarti + Souvlaki Club – Enjoy rakomelo at Astarti and delicious souvlaki next door",
+                    "🏖️ Agios Nikolaos Beach – Accessible by boat from Chora",
+                    "🚌 Taxi or bus required to reach beautiful Chora"
+                ]
+            },
+            {
+                name: "Santorini (Vlychada)",
+                coords: [36.33679681747161, 25.434799870872432],
+                day: "Days 7-10",
+                distance: "28 NM",
+                type: "key",
+                info: "Vlychada Marina - fuel and supplies available. Base for 3 days. Explore Oia, Fira, Akrotiri. VHF: Channel 9.",
+                highlights: [
+                    "🍽️ La Maison & Altana (Imerovigli) – Caldera-view fine-dining and sunset cocktails",
+                    "☕ Pentozali (Mesaria) – Charming cafe/bar in a local square",
+                    "🍷 Metaxi Mas (Exogonia) – Cretan-Greek fusion with great wine choices",
+                    "🥾 Hike Fira → Oia for classic caldera vistas",
+                    "🏛️ Visit Akrotiri archaeological site"
+                ]
+            },
+            {
+                name: "Ios",
+                coords: [36.722443260553966, 25.272982888702682],
+                day: "Day 11",
+                distance: "22 NM",
+                type: "marina",
+                info: "Choose Manganari Bay (peaceful, dinghy access) or Ios Port (lively, walk to Chora). VHF: Channel 12.",
+                highlights: [
+                    "🐙 Drakos Taverna – On Mylopotas beach, famous for fresh seafood and octopus hung to dry",
+                    "🍣 Pathos Club & Restaurant – Sunset dining and sushi west of Chora",
+                    "🧀 Diaseli Cheese Museum – Cheese tasting and local honey + traditional wine",
+                    "🏖️ Mylopotas, Manganari – Sandy, beautiful, and accessible beaches"
+                ]
+            },
+            {
+                name: "Sifnos (Kamares)",
+                coords: [36.990473385501964, 24.6748724110167],
+                day: "Day 12",
+                distance: "45 NM",
+                type: "marina",
+                info: "Early departure required. Full port services. Town walkable, buses to Apollonia/Kastro. VHF: Channel 12.",
+                highlights: [
+                    "🥧 Tsikali (Vathi) – Farm-to-table produce and exquisite lemon pie",
+                    "🏛️ Felos (Ano Petali) – Historic family-run spot since 1900",
+                    "🍕 Cameron – Pizza & pasta near Kamares Port, ideal for lunch before departure",
+                    "🍖 Try mastelo (slow-cooked lamb/goat) and revithada (chickpea stew)",
+                    "🚌 Walk to Apollonia or Kastro for meals and atmosphere"
+                ]
+            },
+            {
+                name: "Kythnos",
+                coords: [37.390803984396435, 24.39558753625025],
+                day: "Day 13",
+                distance: "25 NM",
+                type: "anchorage",
+                info: "Kolona Bay (iconic sandbar) or Loutra (quieter). Loutra Marina VHF: Channel 73. Depth: 5-8m.",
+                highlights: [
+                    "🏖️ Anchor at Kolona Bay and relax on the iconic sandbar",
+                    "🍽️ Ristorante Ostria – Recommended spot on Kythnos",
+                    "🚶 In Loutra, walk to local tavernas",
+                    "⚓ Choose between busy Kolona Bay or quieter Loutra"
+                ]
+            }
+        ];
+        
+        // Color coding for different types
+        const colors = {
+            start: '#4CAF50',
+            marina: '#2196F3',
+            anchorage: '#FF9800',
+            key: '#E91E63'
+        };
+        
+        // Store markers for later reference
+        const markers = [];
+        
+        // Add markers for each waypoint
+        waypoints.forEach((point, index) => {
+            const marker = L.circleMarker(point.coords, {
+                color: colors[point.type],
+                fillColor: colors[point.type],
+                fillOpacity: 0.8,
+                radius: point.type === 'key' ? 12 : 8,
+                weight: 2
+            }).addTo(map);
+            
+            // Create popup content
+            let popupContent = `
+                <div class="popup-content">
+                    <h4>${point.name}</h4>
+                    <div class="popup-detail"><strong>Day:</strong> ${point.day}</div>
+            `;
+            
+            if (point.distance) {
+                popupContent += `<div class="popup-detail"><strong>Distance:</strong> ${point.distance}</div>`;
+            }
+            
+            popupContent += `
+                    <div class="popup-detail"><strong>Type:</strong> ${point.type.charAt(0).toUpperCase() + point.type.slice(1)}</div>
+                    <div class="popup-detail" style="margin-top: 10px;">${point.info}</div>
+            `;
+            
+            // Add highlights if they exist
+            if (point.highlights && point.highlights.length > 0) {
+                popupContent += `
+                    <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #eee;">
+                        <strong style="color: #667eea;">Highlights:</strong>
+                        <div style="margin-top: 8px;">
+                `;
+                
+                point.highlights.forEach(highlight => {
+                    popupContent += `<div style="margin: 5px 0; font-size: 0.85em; line-height: 1.3;">• ${highlight}</div>`;
+                });
+                
+                popupContent += `
+                        </div>
+                    </div>
+                `;
+            }
+            
+            popupContent += `
+                </div>
+            `;
+            
+            // Bind popup to marker
+            marker.bindPopup(popupContent, {
+                maxWidth: 400,
+                className: 'custom-popup'
+            });
+            
+            markers.push(marker);
+            
+            // Add number label for sequence - also make it clickable
+            if (index > 0) {
+                const numberMarker = L.marker(point.coords, {
+                    icon: L.divIcon({
+                        className: 'number-marker',
+                        html: `<div style="background: white; border: 2px solid ${colors[point.type]}; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; color: ${colors[point.type]}; cursor: pointer;">${index}</div>`,
+                        iconSize: [24, 24],
+                        iconAnchor: [12, 12]
+                    })
+                }).addTo(map);
+                
+                // Bind the same popup to the number marker
+                numberMarker.bindPopup(popupContent, {
+                    maxWidth: 400,
+                    className: 'custom-popup'
+                });
+            }
+        });
+        
+        // Draw route lines
+        const routeCoords = waypoints.map(point => point.coords);
+        L.polyline(routeCoords, {
+            color: '#667eea',
+            weight: 3,
+            opacity: 0.7,
+            dashArray: '10, 5'
+        }).addTo(map);
+        
+        // Add some styling for better visual appeal
+        const style = document.createElement('style');
+        style.textContent = `
+            .leaflet-popup-content-wrapper {
+                border-radius: 10px;
+                box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            }
+            .leaflet-popup-tip {
+                background: white;
+            }
+            .custom-popup .leaflet-popup-content {
+                margin: 8px 12px;
+                line-height: 1.4;
+            }
+            .number-marker {
+                cursor: pointer;
+            }
+            .number-marker:hover {
+                opacity: 0.8;
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Ensure map is properly loaded
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+        
+        // Fit map to show all waypoints
+        const group = new L.featureGroup(waypoints.map(point => L.marker(point.coords)));
+        map.fitBounds(group.getBounds().pad(0.1));
+    </script>
+</body>
+</html>
